@@ -11,7 +11,7 @@ public interface UserService{
 
     List<UserDTO> listAllUsers();
     UserDTO findByUserName(String username);
-    void save(UserDTO dto);
+    UserDTO save(UserDTO dto);
     UserDTO update(UserDTO dto);
     void deleteByUserName(String username);
     void delete(String username) throws TicketingProjectException;
