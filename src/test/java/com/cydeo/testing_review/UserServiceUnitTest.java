@@ -11,6 +11,7 @@ import com.cydeo.service.ProjectService;
 import com.cydeo.service.TaskService;
 import com.cydeo.service.impl.UserServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -18,8 +19,15 @@ import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import static org.assertj.core.api.Assertions.catchThrowable;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import java.util.List;
+import java.util.NoSuchElementException;
+
+import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 public class UserServiceUnitTest {
@@ -89,9 +97,56 @@ public class UserServiceUnitTest {
         return List.of(userDTO,userDTO2);
     }
 
+    @Test
+    void should_list_all_users(){
+        //stub
+        when(userRepository.findAllByIsDeletedOrderByFirstNameDesc(false)).thenReturn(getUsers());
 
+        List<UserDTO> expectedList = getUserDTOs();
 
+        List<UserDTO> actualList = userService.listAllUsers();
 
+        //Assertions.assertEquals(expectedList,actualList);
 
+        //AssertJ
+        assertThat(actualList).usingRecursiveComparison().ignoringExpectedNullFields().isEqualTo(expectedList);
+    }
+
+    @Test
+    void should_find_user_by_username(){
+        when(userRepository.findByUserNameAndIsDeleted(anyString(),anyBoolean())).thenReturn(user);
+        //lenient().when(userRepository.findAllByIsDeletedOrderByFirstNameDesc(false)).thenReturn(getUsers());
+
+        UserDTO actualUserDTO = userService.findByUserName("user");
+        UserDTO expectedUserDTO = userDTO;
+
+        assertThat(actualUserDTO).usingRecursiveComparison().isEqualTo(expectedUserDTO);
+    }
+
+    @Test
+    void should_throw_exception_when_user_not_found(){
+        //we can either stub null or do nothing since it will return null also.
+        //when(userRepository.findByUserNameAndIsDeleted(anyString(),anyBoolean())).thenReturn(null);
+
+        //we call the method and capture the exception and its message
+        Throwable throwable = catchThrowable(()->userService.findByUserName("someUsername"));
+        //we use assertInstanceOf method to verify exception type
+        assertInstanceOf(NoSuchElementException.class,throwable);
+        //we can verify exception message with assertEquals
+        assertEquals("User not found",throwable.getMessage());
+    }
+
+    @Test
+    void should_save_user(){
+
+        when(passwordEncoder.encode(anyString())).thenReturn("anypassword");
+        when(userRepository.save(any())).thenReturn(user);
+        UserDTO actualDTO = userService.save(userDTO);
+
+        verify(keycloakService).userCreate(any());
+
+        assertThat(actualDTO).usingRecursiveComparison().isEqualTo(userDTO);
+
+    }
 
 }
